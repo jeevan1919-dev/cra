@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Dr. Driving: Gesture Edition (3D Hand Tracking)</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
+  <style>:root{--primary-red:#e53935;--accent-yellow:#ffeb3b;--neon-cyan:#00f3ff;--bg-dark:#0f172a;--panel-bg:#0f172ae0;--font-family:"Segoe UI", system-ui, -apple-system, sans-serif}*{box-sizing:border-box;-webkit-user-select:none;user-select:none;margin:0;padding:0}body,html{width:100%;height:100%;font-family:var(--font-family);color:#fff;background:#000;overflow:hidden}#game-container{z-index:1;width:100%;height:100%;position:absolute;top:0;left:0}#damage-flash-overlay{pointer-events:none;opacity:0;z-index:50;width:100%;height:100%;transition:opacity 80ms ease-out;position:absolute;top:0;left:0;box-shadow:inset 0 0 100px 50px #ff0000e6}#top-bar{z-index:20;background:linear-gradient(#000000d9 0%,#0006 80%,#0000 100%);justify-content:space-between;align-items:center;width:100%;height:64px;padding:0 20px;display:flex;position:absolute;top:0;left:0}.brand-cluster{align-items:center;gap:12px;margin-left:88px;display:flex}.brand-logo{letter-spacing:1px;background:linear-gradient(135deg,#ff1744,#ff9100);-webkit-text-fill-color:transparent;text-transform:uppercase;text-shadow:0 2px 10px #ff174466;-webkit-background-clip:text;font-size:20px;font-weight:900}.mode-tag{color:#000;letter-spacing:.5px;background:#00e5ff;border-radius:4px;padding:3px 8px;font-size:11px;font-weight:800}.mission-hud-center{text-align:center;flex-direction:column;align-items:center;min-width:320px;display:flex}.level-title-row{align-items:center;gap:8px;display:flex}#hud-level-title{color:var(--accent-yellow);letter-spacing:.5px;font-size:16px;font-weight:800}.diff-pill{text-transform:uppercase;letter-spacing:.5px;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:900}.objective-progress-container{background:#ffffff26;border:1px solid #ffffff40;border-radius:3px;width:100%;max-width:280px;height:6px;margin:4px 0 2px;overflow:hidden}#hud-progress-bar{background:linear-gradient(90deg,#00e5ff,#0f8);border-radius:3px;width:0%;height:100%;transition:width .15s ease-out}.hud-metric-row{align-items:center;gap:12px;display:flex}#hud-level-metric{color:#fff;font-size:12px;font-weight:700}#hud-live-score{color:gold;background:#ffd70026;border:1px solid #ffd7004d;border-radius:4px;padding:1px 6px;font-size:12px;font-weight:900}.metric-good{color:#0f8;font-weight:900}.metric-warn{color:#ffeb3b;font-weight:900}.metric-alert{color:#ff1744;font-weight:900;animation:.4s infinite alternate blinkAlert}@keyframes blinkAlert{0%{opacity:1}to{opacity:.3}}.top-controls-right{align-items:center;gap:10px;display:flex}.hud-coin-badge{color:gold;background:#0f172acc;border:1px solid #ffd70080;border-radius:8px;align-items:center;gap:6px;padding:6px 12px;font-size:14px;font-weight:800;display:flex}.top-btn{color:#fff;cursor:pointer;background:#1e293bd9;border:1px solid #475569;border-radius:6px;padding:8px 12px;font-size:12px;font-weight:700;transition:all .15s}.top-btn:hover{background:#334155;border-color:#38bdf8}#hud-warning-banner{color:#fff;letter-spacing:.5px;z-index:25;pointer-events:none;background:#ff1744eb;border-radius:20px;padding:7px 20px;font-size:13px;font-weight:800;transition:all .2s;animation:.5s infinite alternate alertPulse;position:absolute;top:72px;left:50%;transform:translate(-50%);box-shadow:0 4px 16px #ff174480}#hud-warning-banner.info-style{background:#0284c7eb;animation:none;box-shadow:0 4px 16px #0284c780}@keyframes alertPulse{0%{transform:translate(-50%)scale(1)}to{transform:translate(-50%)scale(1.03)}}#mission-briefing-card{text-align:center;z-index:25;pointer-events:none;background:#0f172af2;border:2px solid #00e5ff;border-radius:14px;width:90%;max-width:440px;padding:14px 24px;transition:opacity .3s,transform .3s;position:absolute;top:80px;left:50%;transform:translate(-50%);box-shadow:0 8px 32px #000000b3,0 0 20px #00e5ff4d}.briefing-badge{color:#000;text-transform:uppercase;background:#00e5ff;border-radius:4px;margin-bottom:4px;padding:2px 8px;font-size:10px;font-weight:900;display:inline-block}.briefing-title{color:#fff;margin:2px 0 4px;font-size:18px;font-weight:900}.briefing-desc{color:#cbd5e1;margin-bottom:6px;font-size:12px;line-height:1.4}.briefing-tip{color:#38bdf8;background:#38bdf81f;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700}#dashboard-overlay{z-index:15;pointer-events:none;align-items:flex-end;gap:32px;display:flex;position:absolute;bottom:24px;left:50%;transform:translate(-50%)}.gauge-wrapper{background:radial-gradient(circle,#1e293b 40%,#0f172a 90%);border:3px solid #334155;border-radius:50%;justify-content:center;align-items:center;width:130px;height:130px;display:flex;position:relative;box-shadow:0 8px 24px #0009,inset 0 0 15px #000c}.gauge-ticks{border:2px dashed #ffffff40;border-radius:50%;width:90%;height:90%;position:absolute}.gauge-hub{z-index:4;background:#e2e8f0;border-radius:50%;width:14px;height:14px;position:absolute;box-shadow:0 0 6px #000c}.gauge-needle{transform-origin:bottom;z-index:3;background:#ff1744;border-radius:2px;width:3px;height:50px;transition:transform 50ms linear;position:absolute;bottom:50%;left:calc(50% - 1.5px);transform:rotate(-125deg);box-shadow:0 0 8px #ff1744cc}.gauge-readout{z-index:2;flex-direction:column;align-items:center;display:flex;position:absolute;bottom:22px}.gauge-val{color:#fff;font-variant-numeric:tabular-nums;font-size:20px;font-weight:900}.gauge-unit{color:#94a3b8;letter-spacing:.5px;font-size:9px;font-weight:800}.center-pod{background:#0f172aeb;border:2px solid #334155;border-radius:12px;flex-direction:column;align-items:center;gap:6px;min-width:140px;padding:10px 18px;display:flex;box-shadow:0 8px 24px #0009}.turn-signals-row{justify-content:space-between;width:100%;padding:0 8px;display:flex}.signal-arrow{color:#334155;font-size:16px;transition:color .1s}.signal-arrow.active{color:#f90;text-shadow:0 0 10px #f90}.digital-gear-box{color:#00e5ff;text-shadow:0 0 12px #00e5ff99;background:#0006;border:1px solid #00e5ff4d;border-radius:6px;padding:0 12px;font-size:26px;font-weight:900}.eco-badge{text-transform:uppercase;letter-spacing:.5px;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:800}.eco-optimal{color:#000;background:#0f8}.eco-warning{color:#000;background:#ffeb3b}.eco-alert{color:#fff;background:#ff1744}.fuel-meter{background:#1e293b;border:1px solid #334155;border-radius:3px;width:100%;height:6px;overflow:hidden}#gauge-fuel-fill{background:linear-gradient(90deg,#ff1744,#0f8);width:100%;height:100%;transition:width .3s}#gear-selector-gate{z-index:20;background:#0f172ae0;border:2px solid #334155;border-radius:10px;flex-direction:column;gap:6px;padding:8px;display:flex;position:absolute;bottom:24px;right:24px;box-shadow:0 8px 24px #0009}.gear-btn{color:#94a3b8;cursor:pointer;background:#1e293b;border:1px solid #475569;border-radius:6px;justify-content:center;align-items:center;width:44px;height:44px;font-size:16px;font-weight:900;transition:all .15s;display:flex}.gear-btn:hover{color:#fff;background:#334155}.gear-btn.active{color:#000;background:linear-gradient(135deg,#00e5ff,#0284c7);border-color:#00e5ff;transform:scale(1.06);box-shadow:0 0 14px #00e5ff99}#radar-hud{z-index:20;width:130px;height:130px;position:absolute;bottom:24px;left:20px}#webcam-hud-container{z-index:20;background:#0f172ae6;border:2px solid #334155;border-radius:12px;flex-direction:column;width:200px;height:150px;display:flex;position:absolute;top:72px;right:20px;overflow:hidden;box-shadow:0 8px 24px #0009}.webcam-header{background:#1e293b;border-bottom:1px solid #334155;justify-content:space-between;align-items:center;padding:4px 8px;font-size:10px;font-weight:800;display:flex}#hand-status-tag{color:#38bdf8}.webcam-viewport{flex:1;position:relative;overflow:hidden}#webcam-video{object-fit:cover;width:100%;height:100%;position:absolute;transform:scaleX(-1)}#hand-skeleton-canvas{object-fit:cover;z-index:2;width:100%;height:100%;position:absolute;transform:scaleX(-1)}#controls-bar{color:#64748b;z-index:10;pointer-events:none;letter-spacing:.5px;font-size:11px;font-weight:700;position:absolute;bottom:4px;left:50%;transform:translate(-50%)}.game-modal{backdrop-filter:blur(8px);z-index:100;background:#000000d9;justify-content:center;align-items:center;width:100%;height:100%;transition:opacity .2s;display:flex;position:absolute;top:0;left:0}.game-modal.hidden{display:none!important}.modal-content-box{text-align:center;background:linear-gradient(#1e293b 0%,#0f172a 100%);border:2px solid #38bdf8;border-radius:20px;width:90%;max-width:580px;padding:32px;box-shadow:0 16px 48px #000c,0 0 30px #38bdf840}.modal-title-main{letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;font-size:30px;font-weight:900}.title-win{background:linear-gradient(135deg,#0f8,#00e5ff);-webkit-text-fill-color:transparent;-webkit-background-clip:text}.title-fail{background:linear-gradient(135deg,#ff1744,#ff5252);-webkit-text-fill-color:transparent;-webkit-background-clip:text}.modal-subtitle{color:#94a3b8;margin-bottom:20px;font-size:13px}.stars-cluster{justify-content:center;gap:14px;margin:10px 0 16px;display:flex}.star-icon{filter:grayscale()opacity(30%);font-size:38px;transition:all .35s cubic-bezier(.175,.885,.32,1.275)}.star-icon.active{filter:grayscale(0%)opacity();text-shadow:0 0 20px gold,0 0 40px #ff9100;transform:scale(1.18)}.score-breakdown-box{text-align:left;background:#0f172ab3;border:1px solid #38bdf84d;border-radius:12px;margin:14px 0;padding:12px 18px}.score-row{color:#94a3b8;justify-content:space-between;margin-bottom:6px;font-size:13px;display:flex}.score-row span:last-child{color:#fff;font-weight:800}.score-total-row{color:#00e5ff;border-top:1px solid #ffffff26;justify-content:space-between;margin-top:6px;padding-top:8px;font-size:16px;font-weight:900;display:flex}.badge-record{color:#000;letter-spacing:.5px;background:linear-gradient(135deg,gold,#ff9100);border-radius:20px;margin-top:8px;padding:3px 10px;font-size:11px;font-weight:900;animation:.8s infinite alternate recordGlow;display:inline-block}@keyframes recordGlow{0%{transform:scale(1);box-shadow:0 0 10px #ffd70066}to{transform:scale(1.04);box-shadow:0 0 22px #ffd700e6}}.fail-coach-box{color:#ffcdd2;text-align:left;background:#ff17441a;border:1px solid #ff17444d;border-radius:10px;margin:14px 0;padding:12px 16px;font-size:13px;line-height:1.4}.fail-coach-title{color:#ff8a80;align-items:center;gap:6px;margin-bottom:4px;font-weight:900;display:flex}.level-grid{grid-template-columns:1fr 1fr;gap:16px;max-height:60vh;margin-bottom:24px;padding-right:4px;display:grid;overflow-y:auto}.level-card{text-align:left;cursor:pointer;background:#1e293b;border:2px solid #334155;border-radius:12px;padding:14px;transition:all .2s;position:relative;overflow:hidden}.level-card.unlocked:hover{border-color:#00e5ff;transform:translateY(-3px);box-shadow:0 8px 20px #00e5ff4d}.level-card.locked{opacity:.5;cursor:not-allowed;border-color:#1e293b}.level-header{justify-content:space-between;align-items:center;margin-bottom:6px;display:flex}.level-badge{color:#000;background:#38bdf8;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:900}.reward-tag{color:gold;font-size:11px;font-weight:800}.level-card-title{color:#fff;margin-bottom:2px;font-size:15px;font-weight:800}.level-card-sub{color:#94a3b8;margin-bottom:6px;font-size:10px;font-weight:700}.level-card-desc{color:#cbd5e1;margin-bottom:8px;font-size:11px;line-height:1.35}.level-footer-row{justify-content:space-between;align-items:center;margin-top:6px;margin-bottom:8px;font-size:11px;display:flex}.level-stars-display{color:gold;letter-spacing:2px;font-size:13px}.level-best-tag{color:#94a3b8;font-weight:700}.level-play-btn{color:#fff;cursor:pointer;text-transform:uppercase;background:linear-gradient(135deg,#0284c7,#0369a1);border:none;border-radius:6px;width:100%;padding:8px 0;font-size:12px;font-weight:800}.level-card.locked .level-play-btn{color:#64748b;background:#334155}.modal-btn-row{justify-content:center;gap:12px;margin-top:18px;display:flex}.primary-btn{color:#000;cursor:pointer;text-transform:uppercase;background:linear-gradient(135deg,#00e5ff,#0284c7);border:none;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:900;transition:all .15s;box-shadow:0 4px 16px #00e5ff66}.primary-btn:hover{transform:translateY(-2px);box-shadow:0 6px 22px #00e5ff99}.secondary-btn{color:#fff;cursor:pointer;text-transform:uppercase;background:#334155;border:1px solid #475569;border-radius:8px;padding:12px 20px;font-size:14px;font-weight:800}.secondary-btn:hover{background:#475569}@media (width<=768px){.gauge-wrapper{width:100px;height:100px}.gauge-needle{height:38px}.gauge-val{font-size:15px}#webcam-hud-container{width:150px;height:110px}#radar-hud{display:none}.level-grid{grid-template-columns:1fr}}</style>
+  <script type="module" crossorigin src="/assets/index-CRTgAeHY.js"></script>
+</head>
+<body>
+  <!-- 3D Three.js Canvas Container -->
+  <div id="game-container"></div>
+
+  <!-- Red Damage Flash Vignette -->
+  <div id="damage-flash-overlay"></div>
+
+  <!-- Top Bar HUD -->
+  <div id="top-bar">
+    <div class="brand-cluster">
+      <div class="brand-logo">DR. DRIVING</div>
+      <div class="mode-tag">GESTURE EDITION</div>
+    </div>
+
+    <!-- Center Mission Task HUD -->
+    <div class="mission-hud-center">
+      <div class="level-title-row">
+        <span id="hud-level-title">LVL 1: Novice Cruise</span>
+        <span id="hud-level-diff" class="diff-pill" style="background: #00ff88; color: #000;">EASY</span>
+      </div>
+      <div class="objective-progress-container">
+        <div id="hud-progress-bar"></div>
+      </div>
+      <div class="hud-metric-row">
+        <span id="hud-level-metric">DISTANCE: 0m / 200m (0%)</span>
+        <span id="hud-live-score">⭐ 0 PTS</span>
+      </div>
+    </div>
+
+    <div class="top-controls-right">
+      <div class="hud-coin-badge">
+        <span>🪙</span>
+        <span id="hud-coin-count">500</span>
+      </div>
+      <button id="btn-open-missions" class="top-btn" title="View Missions">📋 MISSIONS</button>
+      <button id="btn-toggle-cam" class="top-btn" title="Toggle Cockpit / Chase Camera (C)">🎥 COCKPIT</button>
+      <button id="btn-toggle-mute" class="top-btn" title="Toggle Audio (M)">🔊 SOUND ON</button>
+      <button id="btn-toggle-controls" class="top-btn" title="Toggle Gesture / Keyboard">✋ GESTURE MODE</button>
+    </div>
+  </div>
+
+  <!-- Floating Live Warning Banner -->
+  <div id="hud-warning-banner" class="hidden"></div>
+
+  <!-- Floating Mission Briefing Card -->
+  <div id="mission-briefing-card" class="hidden">
+    <div id="briefing-badge" class="briefing-badge">LVL 1 • EASY</div>
+    <h2 id="briefing-title" class="briefing-title">Novice Cruise</h2>
+    <p id="briefing-desc" class="briefing-desc">Shift to D and cruise 200m forward to Checkpoint 1.</p>
+    <div id="briefing-tip" class="briefing-tip">💡 Tip: Shift into D (Key 4) and tilt hands gently to steer.</div>
+  </div>
+
+  <!-- Classic Cockpit Dashboard Overlay -->
+  <div id="dashboard-overlay">
+    <!-- Speedometer Gauge -->
+    <div class="gauge-wrapper">
+      <div class="gauge-ticks"></div>
+      <div id="gauge-speed-needle" class="gauge-needle"></div>
+      <div class="gauge-hub"></div>
+      <div class="gauge-readout">
+        <span id="gauge-speed-val" class="gauge-val">0</span>
+        <span class="gauge-unit">KM/H</span>
+      </div>
+    </div>
+
+    <!-- Center Info Pod -->
+    <div class="center-pod">
+      <div class="turn-signals-row">
+        <span id="sig-left" class="signal-arrow">◀</span>
+        <span id="sig-right" class="signal-arrow">▶</span>
+      </div>
+      <div id="gauge-gear-disp" class="digital-gear-box">P</div>
+      <div id="gauge-eco-disp" class="eco-badge eco-optimal">ECO OPTIMAL</div>
+      <div class="fuel-meter">
+        <div id="gauge-fuel-fill"></div>
+      </div>
+    </div>
+
+    <!-- Tachometer Gauge -->
+    <div class="gauge-wrapper">
+      <div class="gauge-ticks"></div>
+      <div id="gauge-rpm-needle" class="gauge-needle"></div>
+      <div class="gauge-hub"></div>
+      <div class="gauge-readout">
+        <span id="gauge-rpm-val" class="gauge-val">800</span>
+        <span class="gauge-unit">RPM</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dr. Driving Gear Gate (P, R, N, D) -->
+  <div id="gear-selector-gate">
+    <button id="gear-btn-p" class="gear-btn active" title="Park (Key 1)">P</button>
+    <button id="gear-btn-r" class="gear-btn" title="Reverse (Key 2)">R</button>
+    <button id="gear-btn-n" class="gear-btn" title="Neutral (Key 3)">N</button>
+    <button id="gear-btn-d" class="gear-btn" title="Drive (Key 4)">D</button>
+  </div>
+
+  <!-- Radar Minimap -->
+  <div id="radar-hud">
+    <canvas id="radar-canvas" width="130" height="130"></canvas>
+  </div>
+
+  <!-- MediaPipe Hand Tracking HUD Overlay -->
+  <div id="webcam-hud-container">
+    <div class="webcam-header">
+      <span>AI HAND VISION</span>
+      <span id="hand-status-tag">INITIALIZING...</span>
+    </div>
+    <div class="webcam-viewport">
+      <video id="webcam-video" autoplay playsinline muted></video>
+      <canvas id="hand-skeleton-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Keyboard Reminder Bar -->
+  <div id="controls-bar">
+    [W/S] Gas/Brake &nbsp;|&nbsp; [A/D] Steer &nbsp;|&nbsp; [Space] E-Brake &nbsp;|&nbsp; [1-4] P/R/N/D &nbsp;|&nbsp; [Q/E] Signals &nbsp;|&nbsp; [C] Cam &nbsp;|&nbsp; [H] Horn
+  </div>
+
+  <!-- Modal: Level Select & Main Menu -->
+  <div id="modal-level-select" class="game-modal hidden">
+    <div class="modal-content-box">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <h2 class="modal-title-main title-win" style="margin: 0;">SELECT MISSION</h2>
+        <button id="btn-close-level-select" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 18px; font-weight: bold; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Close">✕</button>
+      </div>
+      <p class="modal-subtitle">Choose your driving stage. Tilt both hands to steer or use WASD!</p>
+
+      <div id="level-selection-grid" class="level-grid">
+        <!-- Dynamically injected level cards -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Stage Clear (Victory) -->
+  <div id="modal-stage-clear" class="game-modal hidden">
+    <div class="modal-content-box">
+      <h2 class="modal-title-main title-win">STAGE CLEAR!</h2>
+      <p class="modal-subtitle">Mission objectives accomplished!</p>
+
+      <!-- 3-Star Rating Animation -->
+      <div class="stars-cluster">
+        <span id="star-1" class="star-icon">⭐</span>
+        <span id="star-2" class="star-icon">⭐</span>
+        <span id="star-3" class="star-icon">⭐</span>
+      </div>
+
+      <!-- Granular Itemized Score Table -->
+      <div class="score-breakdown-box">
+        <div class="score-row"><span>🏁 Mission Base:</span><span id="score-val-base">+1,000</span></div>
+        <div class="score-row"><span>⏱️ Time Bonus:</span><span id="score-val-time">+420</span></div>
+        <div class="score-row"><span>🛡️ Clean Drive (No Damage):</span><span id="score-val-clean">+500</span></div>
+        <div class="score-row"><span>🌿 Smooth & Technique:</span><span id="score-val-tech">+340</span></div>
+        <div class="score-total-row"><span>TOTAL SCORE:</span><span id="score-val-total">2,260 PTS</span></div>
+      </div>
+
+      <div id="badge-new-record" class="badge-record hidden">🏆 NEW PERSONAL BEST!</div>
+
+      <div id="win-reward-text" style="font-size: 20px; font-weight: 900; color: #ffd700; margin: 12px 0;">+350 COINS EARNED!</div>
+
+      <div class="modal-btn-row">
+        <button id="btn-next-level" class="primary-btn">NEXT MISSION</button>
+        <button id="btn-retry-win" class="secondary-btn">REPLAY</button>
+        <button id="btn-menu-from-win" class="secondary-btn">MISSIONS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Stage Failed (Crash / Violation / Fuel) -->
+  <div id="modal-stage-failed" class="game-modal hidden">
+    <div class="modal-content-box">
+      <h2 class="modal-title-main title-fail">MISSION FAILED</h2>
+      <p id="fail-reason-text" style="font-size: 16px; color: #ff8a80; margin: 12px 0 6px 0; font-weight: 800;">COLLISION! Vehicle damaged.</p>
+
+      <div class="fail-coach-box">
+        <div class="fail-coach-title">💡 DRIVER COACH TIP</div>
+        <div id="fail-coach-tip">Keep your steering smooth and maintain safe stopping distances from vehicles ahead.</div>
+      </div>
+
+      <div class="modal-btn-row">
+        <button id="btn-retry-fail" class="primary-btn">TRY AGAIN</button>
+        <button id="btn-menu-from-fail" class="secondary-btn">MISSIONS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core App Entry -->
+</body>
+</html>

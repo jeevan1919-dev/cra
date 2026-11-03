@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Dr. Driving: Gesture Edition (3D Hand Tracking)</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
+  <style>
+    :root {
+      --primary-red: #e53935;
+      --accent-yellow: #ffeb3b;
+      --neon-cyan: #00f3ff;
+      --bg-dark: #0f172a;
+      --panel-bg: rgba(15, 23, 42, 0.88);
+      --font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: var(--font-family);
+      color: #fff;
+    }
+
+    #game-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Red Damage Vignette Flash */
+    #damage-flash-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      box-shadow: inset 0 0 100px 50px rgba(255, 0, 0, 0.9);
+      opacity: 0;
+      transition: opacity 0.08s ease-out;
+      z-index: 50;
+    }
+
+    /* Top Status Bar */
+    #top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 80%, transparent 100%);
+      z-index: 20;
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-left: 88px; /* Offset for live stats.js FPS meter */
+    }
+
+    .brand-logo {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #ff1744, #ff9100);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-transform: uppercase;
+      text-shadow: 0 2px 10px rgba(255, 23, 68, 0.4);
+    }
+
+    .mode-tag {
+      font-size: 11px;
+      background: #00e5ff;
+      color: #000;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Center Mission Task HUD */
+    .mission-hud-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      min-width: 320px;
+    }
+
+    .level-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #hud-level-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent-yellow);
+      letter-spacing: 0.5px;
+    }
+
+    .diff-pill {
+      font-size: 10px;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .objective-progress-container {
+      width: 100%;
+      max-width: 280px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+      margin: 4px 0 2px 0;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    #hud-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #00e5ff, #00ff88);
+      border-radius: 3px;
+      transition: width 0.15s ease-out;
+    }
+
+    .hud-metric-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #hud-level-metric {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    #hud-live-score {
+      font-size: 12px;
+      font-weight: 900;
+      color: #ffd700;
+      background: rgba(255, 215, 0, 0.15);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+    }
+
+    .metric-good { color: #00ff88; font-weight: 900; }
+    .metric-warn { color: #ffeb3b; font-weight: 900; }
+    .metric-alert { color: #ff1744; font-weight: 900; animation: blinkAlert 0.4s infinite alternate; }
+
+    @keyframes blinkAlert {
+      from { opacity: 1; }
+      to { opacity: 0.3; }
+    }
+
+    .top-controls-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hud-coin-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 215, 0, 0.5);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 14px;
+      color: #ffd700;
+    }
+
+    .top-btn {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid #475569;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .top-btn:hover {
+      background: #334155;
+      border-color: #38bdf8;
+    }
+
+    /* Floating Warning & Tip Banner */
+    #hud-warning-banner {
+      position: absolute;
+      top: 72px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 23, 68, 0.92);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      padding: 7px 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 16px rgba(255, 23, 68, 0.5);
+      z-index: 25;
+      transition: all 0.2s ease;
+      pointer-events: none;
+      animation: alertPulse 0.5s infinite alternate;
+    }
+
+    #hud-warning-banner.info-style {
+      background: rgba(2, 132, 199, 0.92);
+      box-shadow: 0 4px 16px rgba(2, 132, 199, 0.5);
+      animation: none;
+    }
+
+    @keyframes alertPulse {
+      from { transform: translateX(-50%) scale(1.0); }
+      to { transform: translateX(-50%) scale(1.03); }
+    }
+
+    /* Floating Mission Briefing Card */
+    #mission-briefing-card {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 2px solid #00e5ff;
+      border-radius: 14px;
+      padding: 14px 24px;
+      text-align: center;
+      max-width: 440px;
+      width: 90%;
+      z-index: 25;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 229, 255, 0.3);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+    }
+
+    .briefing-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 900;
+      background: #00e5ff;
+      color: #000;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .briefing-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #fff;
+      margin: 2px 0 4px 0;
+    }
+
+    .briefing-desc {
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+
+    .briefing-tip {
+      font-size: 11px;
+      color: #38bdf8;
+      font-weight: 700;
+      background: rgba(56, 189, 248, 0.12);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    /* Classic Dashboard Overlay */
+    #dashboard-overlay {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: flex-end;
+      gap: 32px;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    .gauge-wrapper {
+      position: relative;
+      width: 130px;
+      height: 130px;
+      background: radial-gradient(circle, #1e293b 40%, #0f172a 90%);
+      border: 3px solid #334155;
+      border-radius: 50%;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6), inset 0 0 15px rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gauge-ticks {
+      position: absolute;
+      width: 90%;
+      height: 90%;
+      border-radius: 50%;
+      border: 2px dashed rgba(255, 255, 255, 0.25);
+    }
+
+    .gauge-hub {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: #e2e8f0;
+      border-radius: 50%;
+      z-index: 4;
+      box-shadow: 0 0 6px rgba(0,0,0,0.8);
+    }
+
+    .gauge-needle {
+      position: absolute;
+      width: 3px;
+      height: 50px;
+      background: #ff1744;
+      bottom: 50%;
+      left: calc(50% - 1.5px);
+      transform-origin: bottom center;
+      transform: rotate(-125deg);
+      transition: transform 0.05s linear;
+      z-index: 3;
+      border-radius: 2px;
+      box-shadow: 0 0 8px rgba(255, 23, 68, 0.8);
+    }
+
+    .gauge-readout {
+      position: absolute;
+      bottom: 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 2;
+    }
+
+    .gauge-val {
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .gauge-unit {
+      font-size: 9px;
+      font-weight: 800;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+    }
+
+    /* Center Info Pod */
+    .center-pod {
+      background: rgba(15, 23, 42, 0.92);
+      border: 2px solid #334155;
+      border-radius: 12px;
+      padding: 10px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 140px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+
+    .turn-signals-row {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0 8px;
+    }
+
+    .signal-arrow {
+      font-size: 16px;
+      color: #334155;
+      transition: color 0.1s ease;
+    }
+
+    .signal-arrow.active {
+      color: #ff9900;
+      text-shadow: 0 0 10px #ff9900;
+    }
+
+    .digital-gear-box {
+      font-size: 26px;
+      font-weight: 900;
+      color: #00e5ff;
+      text-shadow: 0 0 12px rgba(0, 229, 255, 0.6);
+      padding: 0 12px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 6px;
+      border: 1px solid rgba(0, 229, 255, 0.3);
+    }
+
+    .eco-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .eco-optimal { background: #00ff88; color: #000; }
+    .eco-warning { background: #ffeb3b; color: #000; }
+    .eco-alert { background: #ff1744; color: #fff; }
+
+    .fuel-meter {
+      width: 100%;
+      height: 6px;
+      background: #1e293b;
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid #334155;
+    }
+
+    #gauge-fuel-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff1744, #00ff88);
+      transition: width 0.3s ease;
+    }
+
+    /* Dr. Driving Gear Gate (P, R, N, D) */
+    #gear-selector-gate {
+      position: absolute;
+      right: 24px;
+      bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 2px solid #334155;
+      border-radius: 10px;
+      padding: 8px;
+      z-index: 20;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+
+    .gear-btn {
+      width: 44px;
+      height: 44px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #94a3b8;
+      font-size: 16px;
+      font-weight: 900;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .gear-btn:hover {
+      background: #334155;
+      color: #fff;
+    }
+
+    .gear-btn.active {
+      background: linear-gradient(135deg, #00e5ff, #0284c7);
+      color: #000;
+      border-color: #00e5ff;
+      box-shadow: 0 0 14px rgba(0, 229, 255, 0.6);
+      transform: scale(1.06);
+    }
+
+    /* Radar Minimap */
+    #radar-hud {
+      position: absolute;
+      left: 20px;
+      bottom: 24px;
+      width: 130px;
+      height: 130px;
+      z-index: 20;
+    }
+
+    /* MediaPipe Hand Tracking Overlay */
+    #webcam-hud-container {
+      position: absolute;
+      top: 72px;
+      right: 20px;
+      width: 200px;
+      height: 150px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 2px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+      z-index: 20;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .webcam-header {
+      padding: 4px 8px;
+      background: #1e293b;
+      font-size: 10px;
+      font-weight: 800;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+    }
+
+    #hand-status-tag {
+      color: #38bdf8;
+    }
+
+    .webcam-viewport {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #webcam-video {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    #hand-skeleton-canvas {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      z-index: 2;
+    }
+
+    /* Keyboard Reminder Bar */
+    #controls-bar {
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      z-index: 10;
+      pointer-events: none;
+      letter-spacing: 0.5px;
+    }
+
+    /* Modal dialogs */
+    .game-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity 0.2s ease;
+    }
+
+    .game-modal.hidden {
+      display: none !important;
+    }
+
+    .modal-content-box {
+      width: 90%;
+      max-width: 580px;
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #38bdf8;
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 30px rgba(56, 189, 248, 0.25);
+      text-align: center;
+    }
+
+    .modal-title-main {
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .title-win {
+      background: linear-gradient(135deg, #00ff88, #00e5ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .title-fail {
+      background: linear-gradient(135deg, #ff1744, #ff5252);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .modal-subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 20px;
+    }
+
+    /* Stars Cluster Animation */
+    .stars-cluster {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin: 10px 0 16px 0;
+    }
+
+    .star-icon {
+      font-size: 38px;
+      filter: grayscale(100%) opacity(30%);
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .star-icon.active {
+      filter: grayscale(0%) opacity(100%);
+      transform: scale(1.18);
+      text-shadow: 0 0 20px #ffd700, 0 0 40px #ff9100;
+    }
+
+    /* Score Breakdown Table */
+    .score-breakdown-box {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin: 14px 0;
+      text-align: left;
+    }
+
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+
+    .score-row span:last-child {
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .score-total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 16px;
+      font-weight: 900;
+      color: #00e5ff;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      padding-top: 8px;
+      margin-top: 6px;
+    }
+
+    .badge-record {
+      display: inline-block;
+      background: linear-gradient(135deg, #ffd700, #ff9100);
+      color: #000;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      margin-top: 8px;
+      animation: recordGlow 0.8s infinite alternate;
+    }
+
+    @keyframes recordGlow {
+      from { box-shadow: 0 0 10px rgba(255, 215, 0, 0.4); transform: scale(1); }
+      to { box-shadow: 0 0 22px rgba(255, 215, 0, 0.9); transform: scale(1.04); }
+    }
+
+    /* Failure Coach Tip Box */
+    .fail-coach-box {
+      background: rgba(255, 23, 68, 0.1);
+      border: 1px solid rgba(255, 23, 68, 0.3);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin: 14px 0;
+      font-size: 13px;
+      color: #ffcdd2;
+      line-height: 1.4;
+      text-align: left;
+    }
+
+    .fail-coach-title {
+      font-weight: 900;
+      color: #ff8a80;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Level Selection Grid */
+    .level-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+      max-height: 60vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .level-card {
+      background: #1e293b;
+      border: 2px solid #334155;
+      border-radius: 12px;
+      padding: 14px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .level-card.unlocked:hover {
+      border-color: #00e5ff;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0, 229, 255, 0.3);
+    }
+
+    .level-card.locked {
+      opacity: 0.5;
+      cursor: not-allowed;
+      border-color: #1e293b;
+    }
+
+    .level-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .level-badge {
+      font-size: 11px;
+      font-weight: 900;
+      background: #38bdf8;
+      color: #000;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .reward-tag {
+      font-size: 11px;
+      font-weight: 800;
+      color: #ffd700;
+    }
+
+    .level-card-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+
+    .level-card-sub {
+      font-size: 10px;
+      font-weight: 700;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+
+    .level-card-desc {
+      font-size: 11px;
+      color: #cbd5e1;
+      line-height: 1.35;
+      margin-bottom: 8px;
+    }
+
+    .level-footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      margin-bottom: 8px;
+      font-size: 11px;
+    }
+
+    .level-stars-display {
+      color: #ffd700;
+      letter-spacing: 2px;
+      font-size: 13px;
+    }
+
+    .level-best-tag {
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
+    .level-play-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      border: none;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 8px 0;
+      border-radius: 6px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .level-card.locked .level-play-btn {
+      background: #334155;
+      color: #64748b;
+    }
+
+    /* Modal Action Buttons */
+    .modal-btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, #00e5ff, #0284c7);
+      border: none;
+      color: #000;
+      font-size: 14px;
+      font-weight: 900;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+      box-shadow: 0 4px 16px rgba(0, 229, 255, 0.4);
+      transition: all 0.15s ease;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 22px rgba(0, 229, 255, 0.6);
+    }
+
+    .secondary-btn {
+      background: #334155;
+      border: 1px solid #475569;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .secondary-btn:hover {
+      background: #475569;
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+      .gauge-wrapper { width: 100px; height: 100px; }
+      .gauge-needle { height: 38px; }
+      .gauge-val { font-size: 15px; }
+      #webcam-hud-container { width: 150px; height: 110px; }
+      #radar-hud { display: none; }
+      .level-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 3D Three.js Canvas Container -->
+  <div id="game-container"></div>
+
+  <!-- Red Damage Flash Vignette -->
+  <div id="damage-flash-overlay"></div>
+
+  <!-- Top Bar HUD -->
+  <div id="top-bar">
+    <div class="brand-cluster">
+      <div class="brand-logo">DR. DRIVING</div>
+      <div class="mode-tag">GESTURE EDITION</div>
+    </div>
+
+    <!-- Center Mission Task HUD -->
+    <div class="mission-hud-center">
+      <div class="level-title-row">
+        <span id="hud-level-title">LVL 1: Novice Cruise</span>
+        <span id="hud-level-diff" class="diff-pill" style="background: #00ff88; color: #000;">EASY</span>
+      </div>
+      <div class="objective-progress-container">
+        <div id="hud-progress-bar"></div>
+      </div>
+      <div class="hud-metric-row">
+        <span id="hud-level-metric">DISTANCE: 0m / 200m (0%)</span>
+        <span id="hud-live-score">⭐ 0 PTS</span>
+      </div>
+    </div>
+
+    <div class="top-controls-right">
+      <div class="hud-coin-badge">
+        <span>🪙</span>
+        <span id="hud-coin-count">500</span>
+      </div>
+      <button id="btn-open-missions" class="top-btn" title="View Missions">📋 MISSIONS</button>
+      <button id="btn-toggle-cam" class="top-btn" title="Toggle Cockpit / Chase Camera (C)">🎥 COCKPIT</button>
+      <button id="btn-toggle-mute" class="top-btn" title="Toggle Audio (M)">🔊 SOUND ON</button>
+      <button id="btn-toggle-controls" class="top-btn" title="Toggle Gesture / Keyboard">✋ GESTURE MODE</button>
+    </div>
+  </div>
+
+  <!-- Floating Live Warning Banner -->
+  <div id="hud-warning-banner" class="hidden"></div>
+
+  <!-- Floating Mission Briefing Card -->
+  <div id="mission-briefing-card" class="hidden">
+    <div id="briefing-badge" class="briefing-badge">LVL 1 • EASY</div>
+    <h2 id="briefing-title" class="briefing-title">Novice Cruise</h2>
+    <p id="briefing-desc" class="briefing-desc">Shift to D and cruise 200m forward to Checkpoint 1.</p>
+    <div id="briefing-tip" class="briefing-tip">💡 Tip: Shift into D (Key 4) and tilt hands gently to steer.</div>
+  </div>
+
+  <!-- Classic Cockpit Dashboard Overlay -->
+  <div id="dashboard-overlay">
+    <!-- Speedometer Gauge -->
+    <div class="gauge-wrapper">
+      <div class="gauge-ticks"></div>
+      <div id="gauge-speed-needle" class="gauge-needle"></div>
+      <div class="gauge-hub"></div>
+      <div class="gauge-readout">
+        <span id="gauge-speed-val" class="gauge-val">0</span>
+        <span class="gauge-unit">KM/H</span>
+      </div>
+    </div>
+
+    <!-- Center Info Pod -->
+    <div class="center-pod">
+      <div class="turn-signals-row">
+        <span id="sig-left" class="signal-arrow">◀</span>
+        <span id="sig-right" class="signal-arrow">▶</span>
+      </div>
+      <div id="gauge-gear-disp" class="digital-gear-box">P</div>
+      <div id="gauge-eco-disp" class="eco-badge eco-optimal">ECO OPTIMAL</div>
+      <div class="fuel-meter">
+        <div id="gauge-fuel-fill"></div>
+      </div>
+    </div>
+
+    <!-- Tachometer Gauge -->
+    <div class="gauge-wrapper">
+      <div class="gauge-ticks"></div>
+      <div id="gauge-rpm-needle" class="gauge-needle"></div>
+      <div class="gauge-hub"></div>
+      <div class="gauge-readout">
+        <span id="gauge-rpm-val" class="gauge-val">800</span>
+        <span class="gauge-unit">RPM</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dr. Driving Gear Gate (P, R, N, D) -->
+  <div id="gear-selector-gate">
+    <button id="gear-btn-p" class="gear-btn active" title="Park (Key 1)">P</button>
+    <button id="gear-btn-r" class="gear-btn" title="Reverse (Key 2)">R</button>
+    <button id="gear-btn-n" class="gear-btn" title="Neutral (Key 3)">N</button>
+    <button id="gear-btn-d" class="gear-btn" title="Drive (Key 4)">D</button>
+  </div>
+
+  <!-- Radar Minimap -->
+  <div id="radar-hud">
+    <canvas id="radar-canvas" width="130" height="130"></canvas>
+  </div>
+
+  <!-- MediaPipe Hand Tracking HUD Overlay -->
+  <div id="webcam-hud-container">
+    <div class="webcam-header">
+      <span>AI HAND VISION</span>
+      <span id="hand-status-tag">INITIALIZING...</span>
+    </div>
+    <div class="webcam-viewport">
+      <video id="webcam-video" autoplay playsinline muted></video>
+      <canvas id="hand-skeleton-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Keyboard Reminder Bar -->
+  <div id="controls-bar">
+    [W/S] Gas/Brake &nbsp;|&nbsp; [A/D] Steer &nbsp;|&nbsp; [Space] E-Brake &nbsp;|&nbsp; [1-4] P/R/N/D &nbsp;|&nbsp; [Q/E] Signals &nbsp;|&nbsp; [C] Cam &nbsp;|&nbsp; [H] Horn
+  </div>
+
+  <!-- Modal: Level Select & Main Menu -->
+  <div id="modal-level-select" class="game-modal hidden">
+    <div class="modal-content-box">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <h2 class="modal-title-main title-win" style="margin: 0;">SELECT MISSION</h2>
+        <button id="btn-close-level-select" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 18px; font-weight: bold; border-radius: 50%; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Close">✕</button>
+      </div>
+      <p class="modal-subtitle">Choose your driving stage. Tilt both hands to steer or use WASD!</p>
+
+      <div id="level-selection-grid" class="level-grid">
+        <!-- Dynamically injected level cards -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Stage Clear (Victory) -->
+  <div id="modal-stage-clear" class="game-modal hidden">
+    <div class="modal-content-box">
+      <h2 class="modal-title-main title-win">STAGE CLEAR!</h2>
+      <p class="modal-subtitle">Mission objectives accomplished!</p>
+
+      <!-- 3-Star Rating Animation -->
+      <div class="stars-cluster">
+        <span id="star-1" class="star-icon">⭐</span>
+        <span id="star-2" class="star-icon">⭐</span>
+        <span id="star-3" class="star-icon">⭐</span>
+      </div>
+
+      <!-- Granular Itemized Score Table -->
+      <div class="score-breakdown-box">
+        <div class="score-row"><span>🏁 Mission Base:</span><span id="score-val-base">+1,000</span></div>
+        <div class="score-row"><span>⏱️ Time Bonus:</span><span id="score-val-time">+420</span></div>
+        <div class="score-row"><span>🛡️ Clean Drive (No Damage):</span><span id="score-val-clean">+500</span></div>
+        <div class="score-row"><span>🌿 Smooth & Technique:</span><span id="score-val-tech">+340</span></div>
+        <div class="score-total-row"><span>TOTAL SCORE:</span><span id="score-val-total">2,260 PTS</span></div>
+      </div>
+
+      <div id="badge-new-record" class="badge-record hidden">🏆 NEW PERSONAL BEST!</div>
+
+      <div id="win-reward-text" style="font-size: 20px; font-weight: 900; color: #ffd700; margin: 12px 0;">+350 COINS EARNED!</div>
+
+      <div class="modal-btn-row">
+        <button id="btn-next-level" class="primary-btn">NEXT MISSION</button>
+        <button id="btn-retry-win" class="secondary-btn">REPLAY</button>
+        <button id="btn-menu-from-win" class="secondary-btn">MISSIONS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Stage Failed (Crash / Violation / Fuel) -->
+  <div id="modal-stage-failed" class="game-modal hidden">
+    <div class="modal-content-box">
+      <h2 class="modal-title-main title-fail">MISSION FAILED</h2>
+      <p id="fail-reason-text" style="font-size: 16px; color: #ff8a80; margin: 12px 0 6px 0; font-weight: 800;">COLLISION! Vehicle damaged.</p>
+
+      <div class="fail-coach-box">
+        <div class="fail-coach-title">💡 DRIVER COACH TIP</div>
+        <div id="fail-coach-tip">Keep your steering smooth and maintain safe stopping distances from vehicles ahead.</div>
+      </div>
+
+      <div class="modal-btn-row">
+        <button id="btn-retry-fail" class="primary-btn">TRY AGAIN</button>
+        <button id="btn-menu-from-fail" class="secondary-btn">MISSIONS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Core App Entry -->
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
